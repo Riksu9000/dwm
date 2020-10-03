@@ -61,10 +61,11 @@
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel }; /* color schemes */
-enum { NetSupported, NetWMName, NetWMState, NetWMCheck, NetWMFullscreen,
-       NetActiveWindow, NetWMWindowType, NetWMWindowTypeDesktop,
-       NetWMWindowTypeDialog, NetWMWindowTypeMenu, NetWMWindowTypeSplash,
-       NetWMWindowTypeToolbar, NetWMWindowTypeUtility, NetClientList, NetLast }; /* EWMH atoms */
+enum { NetActiveWindow, NetClientList, NetSupported, NetWMName, NetWMState,
+       NetWMCheck, NetWMFocused, NetWMFullscreen, NetWMWindowType,
+       NetWMWindowTypeDesktop, NetWMWindowTypeDialog, NetWMWindowTypeMenu,
+       NetWMWindowTypeSplash, NetWMWindowTypeToolbar, NetWMWindowTypeUtility,
+       NetLast }; /* EWMH atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
 enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
        ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
@@ -232,6 +233,7 @@ static void updatestatus(void);
 static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
+static void updatewmstate(Client *c);
 static void view(const Arg *arg);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
@@ -826,8 +828,8 @@ focus(Client *c)
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
+		selmon->sel = NULL;
 	}
-	selmon->sel = c;
 	drawbars();
 }
 
@@ -1540,6 +1542,8 @@ setfocus(Client *c)
 {
 	if (!c->neverfocus) {
 		XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
+		selmon->sel = c;
+		updatewmstate(c);
 		XChangeProperty(dpy, root, netatom[NetActiveWindow],
 			XA_WINDOW, 32, PropModeReplace,
 			(unsigned char *) &(c->win), 1);
@@ -1551,9 +1555,8 @@ void
 setfullscreen(Client *c, int fullscreen)
 {
 	if (fullscreen && !c->isfullscreen) {
-		XChangeProperty(dpy, c->win, netatom[NetWMState], XA_ATOM, 32,
-			PropModeReplace, (unsigned char*)&netatom[NetWMFullscreen], 1);
 		c->isfullscreen = 1;
+		updatewmstate(c);
 		c->oldstate = c->isfloating;
 		c->oldbw = c->bw;
 		c->bw = 0;
@@ -1561,9 +1564,8 @@ setfullscreen(Client *c, int fullscreen)
 		resizeclient(c, c->mon->mx, c->mon->my, c->mon->mw, c->mon->mh);
 		XRaiseWindow(dpy, c->win);
 	} else if (!fullscreen && c->isfullscreen){
-		XChangeProperty(dpy, c->win, netatom[NetWMState], XA_ATOM, 32,
-			PropModeReplace, (unsigned char*)0, 0);
 		c->isfullscreen = 0;
+		updatewmstate(c);
 		c->isfloating = c->oldstate;
 		c->bw = c->oldbw;
 		c->x = c->oldx;
@@ -1637,6 +1639,7 @@ setup(void)
 	netatom[NetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
 	netatom[NetWMCheck] = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", False);
 	netatom[NetWMFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+	netatom[NetWMFocused] = XInternAtom(dpy, "_NET_WM_STATE_FOCUSED", False);
 	netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
 	netatom[NetWMWindowTypeDesktop] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DESKTOP", False);
 	netatom[NetWMWindowTypeDialog] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
@@ -1849,6 +1852,9 @@ unfocus(Client *c, int setfocus)
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 	}
+	else
+		selmon->sel = NULL;
+	updatewmstate(c);
 }
 
 void
@@ -2131,6 +2137,21 @@ updatewmhints(Client *c)
 			c->neverfocus = 0;
 		XFree(wmh);
 	}
+}
+
+void
+updatewmstate(Client *c)
+{
+	long data[2];
+	int i = 0;
+
+	if (c->isfullscreen)
+		data[i++] = netatom[NetWMFullscreen];
+	if (c == selmon->sel)
+		data[i++] = netatom[NetWMFocused];
+
+	XChangeProperty(dpy, c->win, netatom[NetWMState], XA_ATOM, 32,
+		PropModeReplace, (unsigned char*)data, i);
 }
 
 void
