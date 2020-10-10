@@ -828,8 +828,10 @@ focus(Client *c)
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
-		selmon->sel = NULL;
 	}
+	selmon->sel = c;
+	if (c)
+		updatewmstate(c);
 	drawbars();
 }
 
@@ -1542,8 +1544,6 @@ setfocus(Client *c)
 {
 	if (!c->neverfocus) {
 		XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
-		selmon->sel = c;
-		updatewmstate(c);
 		XChangeProperty(dpy, root, netatom[NetActiveWindow],
 			XA_WINDOW, 32, PropModeReplace,
 			(unsigned char *) &(c->win), 1);
