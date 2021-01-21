@@ -656,19 +656,16 @@ createmon(void)
 void
 cyclelayout(const Arg *arg)
 {
-	const Layout *l;
-
-	l = selmon->lt[selmon->sellt];
 	if (arg->i > 0) {
-		if ((l + 1)->symbol)
-			setlayout(&((Arg) { .v = (l + 1) }));
+		if (selmon->lt[selmon->sellt] != &layouts[LENGTH(layouts) - 1])
+			setlayout(&((Arg) { .v = (selmon->lt[selmon->sellt] + 1) }));
 		else
 			setlayout(&((Arg) { .v = layouts }));
 	} else {
-		if (l != layouts)
-			setlayout(&((Arg) { .v = (l - 1) }));
+		if (selmon->lt[selmon->sellt] != layouts)
+			setlayout(&((Arg) { .v = (selmon->lt[selmon->sellt] - 1) }));
 		else
-			setlayout(&((Arg) { .v = &layouts[LENGTH(layouts) - 2] }));
+			setlayout(&((Arg) { .v = &layouts[LENGTH(layouts) - 1] }));
 	}
 }
 
