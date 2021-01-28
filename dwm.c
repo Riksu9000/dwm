@@ -1222,11 +1222,10 @@ movemouse(const Arg *arg)
 void
 movestack(const Arg *arg)
 {
-	Client *c = NULL, *i;
+	Client *c = NULL, *p = NULL, *pc = NULL, *i;
 
 	if (arg->i > 0) {
-		c = nexttiled(selmon->sel->next);
-		if (!c)
+		if (!(c = nexttiled(selmon->sel->next)))
 			c = nexttiled(selmon->clients);
 	} else {
 		/* find the client before selmon->sel */
@@ -1238,22 +1237,24 @@ movestack(const Arg *arg)
 				if (ISVISIBLE(i) && !i->isfloating)
 					c = i;
 	}
+	/* find the client before selmon->sel and c */
+	for (i = selmon->clients; i && (!p || !pc); i = i->next) {
+		if (i->next == selmon->sel)
+			p = i;
+		else if (i->next == c)
+			pc = i;
+	}
+
 	/* swap c and selmon->sel selmon->clients in the selmon->clients list */
 	if (c && c != selmon->sel) {
-		/* find the client before selmon->sel and c */
-		for (i = selmon->clients; i->next; i = i->next) {
-			if (i != c && i->next == selmon->sel) {
-				i->next = c;
-				break;
-			} else if (i != selmon->sel && i->next == c) {
-				i->next = selmon->sel;
-				break;
-			}
-		}
-
 		i = selmon->sel->next == c ? selmon->sel : selmon->sel->next;
 		selmon->sel->next = c->next == selmon->sel ? c : c->next;
 		c->next = i;
+
+		if (p && p != c)
+			p->next = c;
+		if (pc && pc != selmon->sel)
+			pc->next = selmon->sel;
 
 		if (selmon->sel == selmon->clients)
 			selmon->clients = c;
