@@ -1237,24 +1237,24 @@ movestack(const Arg *arg)
 				if (ISVISIBLE(i) && !i->isfloating)
 					c = i;
 	}
-	/* find the client before selmon->sel and c */
-	for (i = selmon->clients; i && (!p || !pc); i = i->next) {
-		if (i->next == selmon->sel)
-			p = i;
-		else if (i->next == c)
-			pc = i;
-	}
 
 	/* swap c and selmon->sel selmon->clients in the selmon->clients list */
 	if (c && c != selmon->sel) {
-		i = selmon->sel->next == c ? selmon->sel : selmon->sel->next;
-		selmon->sel->next = c->next == selmon->sel ? c : c->next;
-		c->next = i;
-
+		/* find the client before selmon->sel and c */
+		for (i = selmon->clients; i && (!p || !pc); i = i->next) {
+			if (i->next == selmon->sel)
+				p = i;
+			else if (i->next == c)
+				pc = i;
+		}
 		if (p && p != c)
 			p->next = c;
 		if (pc && pc != selmon->sel)
 			pc->next = selmon->sel;
+
+		i = selmon->sel->next == c ? selmon->sel : selmon->sel->next;
+		selmon->sel->next = c->next == selmon->sel ? c : c->next;
+		c->next = i;
 
 		if (selmon->sel == selmon->clients)
 			selmon->clients = c;
